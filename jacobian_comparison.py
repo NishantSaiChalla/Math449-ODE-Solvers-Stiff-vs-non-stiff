@@ -58,7 +58,7 @@ def run_jacobian_comparison():
             status = f"error: {exc}"
             nfev = njev = time_s = None
 
-        print(f" {status}  (nfev={nfev}, njev={njev}, {time_s:.3f}s)" if time_s else f" {status}")
+        print(f" {status}  (nfev={nfev}, {time_s:.3f}s)" if time_s else f" {status}")
 
         records.append({
             "label":  cfg["label"],

@@ -9,6 +9,9 @@ References:
     Comput. Math. Appl., 40, 491-512.
 """
 
+import math
+import warnings
+
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -52,7 +55,7 @@ def _save(fig, path):
 def _bar_labels(ax, bars, fmt="{:.0f}"):
     for bar in bars:
         h = bar.get_height()
-        if h > 0:
+        if h and h > 0 and not math.isnan(h):
             ax.text(bar.get_x() + bar.get_width() / 2.0, h * 1.05,
                     fmt.format(h), ha="center", va="bottom", fontsize=8)
 
@@ -116,22 +119,44 @@ def _grouped_bar_chart(df, metric, ylabel, title, log_scale, figures_dir, fname)
     bar_width = 0.35
     fig, ax   = plt.subplots(figsize=FIGSIZE)
 
+    all_bars_and_values = []
+
     for i, solver in enumerate(solvers):
         values = []
         for prob in problems:
             for tol in TOL_LABELS:
                 row = df[(df["problem"] == prob) & (df["solver"] == solver) & (df["tol_label"] == tol)]
                 val = row.iloc[0][metric] if not row.empty else None
-                values.append(float(val) if val is not None and val == val else 0.0)
+                values.append(float(val) if val is not None and val == val else np.nan)
 
         offset = (i - 0.5) * bar_width
-        bars   = ax.bar(x + offset, values, bar_width,
-                        label=solver, color=colors[solver], alpha=0.85,
-                        edgecolor="white", linewidth=0.5)
+        if log_scale:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                bars = ax.bar(x + offset, values, bar_width,
+                              label=solver, color=colors[solver], alpha=0.85,
+                              edgecolor="white", linewidth=0.5)
+        else:
+            bars = ax.bar(x + offset, values, bar_width,
+                          label=solver, color=colors[solver], alpha=0.85,
+                          edgecolor="white", linewidth=0.5)
         _bar_labels(ax, bars)
+        all_bars_and_values.append((bars, values))
 
     if log_scale:
         ax.set_yscale("log")
+
+    for bars, values in all_bars_and_values:
+        for bar, v in zip(bars, values):
+            if math.isnan(v):
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2.0,
+                    ax.get_ylim()[0] * 1.5,
+                    "DNF",
+                    ha="center", va="bottom", fontsize=8,
+                    color="#A32D2D",
+                    fontweight="bold"
+                )
 
     ax.set_xticks(x)
     ax.set_xticklabels(group_labels, fontsize=TICK_FS)
@@ -163,7 +188,7 @@ def fig6_time_comparison(df, figures_dir):
 
 def fig7_jacobian_comparison(jac_df, figures_dir):
     labels = jac_df["label"].tolist()
-    njev   = jac_df["njev"].fillna(0).astype(float).tolist()
+    nfev   = jac_df["nfev"].fillna(0).astype(float).tolist()
     times  = jac_df["time_s"].fillna(0).astype(float).tolist()
     colors = [COLOR_RADAU, COLOR_RK45, COLOR_BDF]
     x      = np.arange(len(labels))
@@ -171,12 +196,12 @@ def fig7_jacobian_comparison(jac_df, figures_dir):
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=FIGSIZE_7)
 
-    bars1 = ax1.bar(x, njev, bw, color=colors, edgecolor="white", linewidth=0.5)
+    bars1 = ax1.bar(x, nfev, bw, color=colors, edgecolor="white", linewidth=0.5)
     _bar_labels(ax1, bars1)
     ax1.set_xticks(x)
     ax1.set_xticklabels(labels, fontsize=TICK_FS)
-    ax1.set_ylabel("Jacobian Evaluations (njev)", fontsize=LABEL_FS)
-    ax1.set_title("Jacobian Evaluations", fontsize=TITLE_FS)
+    ax1.set_ylabel("Function Evaluations (nfev)", fontsize=LABEL_FS)
+    ax1.set_title("RHS Function Evaluations", fontsize=TITLE_FS)
     ax1.tick_params(axis="y", labelsize=TICK_FS)
     ax1.grid(True, axis="y", alpha=0.4)
 
