@@ -34,7 +34,7 @@ ROB_K2 = 1e4
 ROB_K3 = 3e7
 
 ROB_Y0     = [1.0, 0.0, 0.0]
-ROB_T_SPAN = (0.0, 1e11)
+ROB_T_SPAN = (1e-5, 1e11)
 ROB_T_EVAL = np.logspace(-5, 11, 500)  # log-spaced: solution evolves over 16 decades
 
 
